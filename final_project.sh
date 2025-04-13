@@ -34,7 +34,7 @@ ALIGNED_DIR=${RESULTS_DIR}/aligned
 
 echo Setting up directories...
 mkdir -p $RESULTS_DIR
-mkdir -p $RAW_DIR $QC_REPORT $TRIMMED_DIR
+mkdir -p $RAW_DIR $QC_REPORT $TRIMMED_DIR $ALIGNED_DIR
 echo Completed setting up directories.
 
 # --------------------------------------------------------------------------------------
@@ -95,12 +95,14 @@ echo Completed trimming low quality reads.
 # INDEXING REFERENCE SEQUENCE
 
 # By default, bwa index creates several index files in the same directory as the input FASTA file, and it uses the same base name.
+echo Indexing reference sequence...
 bwa index "${RAW_DIR}/reference_${REF_ID}.fasta"
-
+echo Completed indexing reference sequence.
 
 # Sequence alignment
-bwa mem "${RAW_DIR}/reference_${REF_ID}.fasta" "${TRIMMED_DIR}/trimmed_${SRA}.fastq" > "${ALIGNED_DIR}/aligned_${SRA}.fastq"
-
+echo Aligning sequences...
+bwa mem "${RAW_DIR}/reference_${REF_ID}.fasta" "${TRIMMED_DIR}/trimmed_${SRA}.fastq" > "${ALIGNED_DIR}/aligned_${SRA}.sam"
+echo Completed aligning sequences.
 
 
 
