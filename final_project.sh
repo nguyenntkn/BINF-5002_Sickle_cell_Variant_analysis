@@ -2,7 +2,7 @@
 
 function usage {
     echo Project: BINF5002 final project - Genomics variant analysis of sickle cell anemia
-    echo Authors: Nikita Ch, Simran, Pragati Dwivedi, Tran Khanh Nguyen Nguyen
+    echo Authors: Nikita Chaudhari, Simran Wilasra, Pragati Dwivedi, Tran Khanh Nguyen Nguyen
     echo Description:
     echo Bioconda packages required: entrez-direct, sra-tools, fastqc, fastp, cutadapt, trimmomatic, multiqc, samtools...
     echo Actually used: entrez-direct, sra-tools, fastp, bwa
