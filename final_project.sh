@@ -12,7 +12,7 @@ function usage {
     echo anaconda2023
     echo conda create --prefix ./bioenv
     echo conda activate /home/user/bioenv
-    echo conda install -n bioconda entrez-direct sra-tools fastqc fastp cutadapt trimmomatic multiqc samtools -y
+    echo conda install -c bioconda entrez-direct sra-tools fastqc fastp cutadapt trimmomatic multiqc samtools -y
     echo conda install bwa
     exit 1
 }
