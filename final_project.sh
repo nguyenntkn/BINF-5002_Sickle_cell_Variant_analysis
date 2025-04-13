@@ -99,6 +99,10 @@ echo Indexing reference sequence...
 bwa index "${RAW_DIR}/reference_${REF_ID}.fasta"
 echo Completed indexing reference sequence.
 
+#Indexing with samtools
+echo Indexing reference genome with samtools...
+samtools faidx $RAW_DIR/reference_${REF_ID}.fasta
+
 # Sequence alignment
 echo Aligning sequences...
 bwa mem "${RAW_DIR}/reference_${REF_ID}.fasta" "${TRIMMED_DIR}/trimmed_${SRA}.fastq" > "${ALIGNED_DIR}/aligned_${SRA}.sam"
