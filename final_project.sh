@@ -108,7 +108,14 @@ echo Completed aligning sequences.
 echo Converting .SAM to sorted BAM file...
 samtools view -b ${ALIGNED_DIR}/aligned_${SRA}.sam | samtools sort -o ${ALIGNED_DIR}/aligned_${SRA}.bam
 
-#BLAST
+#Convert FASTQ to FASTA for BLAST
+echo Converting .fastq to .fasta
+seqtk seq -A ${TRIMMED_DIR}/trimmed_${SRA}.fastq > ${TRIMMED_DIR}/trimmed_${SRA}.fasta
+
+#BLAST - makeblastdb from reference.fasta; then perform BLAST
+echo Performing BLAST...
+makeblastdb -in ${RAW_DIR}/reference_${REF_ID}.fasta -dbtype nucl -out blast/reference_${REF_ID}_db
+blastn -query ${TRIMMED_DIR}/trimmed_${SRA}.fasta -db blast/reference_${REF_ID}_db -out blast/blast_output.txt -outfmt 0 -evalue 1e-10
 
 #Indexing with samtools
 echo Indexing reference genome with samtools...
