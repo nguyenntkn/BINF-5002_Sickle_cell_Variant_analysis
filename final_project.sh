@@ -17,6 +17,10 @@ function usage {
     exit 1
 }
 
+#Install GATK - conda create -n gatk4 -c conda-forge -c bioconda gatk4
+#Activate gatk4: conda activate gatk4
+#     $ conda deactivate
+
 # usage 
 
 
@@ -108,6 +112,10 @@ echo Completed aligning sequences.
 echo Converting .SAM to sorted BAM file...
 samtools view -b ${ALIGNED_DIR}/aligned_${SRA}.sam | samtools sort -o ${ALIGNED_DIR}/aligned_${SRA}.bam
 
+#Validate BAM file
+echo Validating BAM file..
+gatk ValidateSamFile -I ${ALIGNED_DIR}/aligned_${SRA}.bam -MODE SUMMARY
+
 #Convert FASTQ to FASTA for BLAST
 echo Converting .fastq to .fasta
 seqtk seq -A ${TRIMMED_DIR}/trimmed_${SRA}.fastq > ${TRIMMED_DIR}/trimmed_${SRA}.fasta
@@ -121,8 +129,17 @@ blastn -query ${TRIMMED_DIR}/trimmed_${SRA}.fasta -db blast/reference_${REF_ID}_
 echo Indexing reference genome with samtools...
 samtools faidx $RAW_DIR/reference_${REF_ID}.fasta
 
+#Creating FASTA dictionary using GATK
+echo Creating FASTA dictionary using GATK
+gatk CreateSequenceDictionary -R $RAW_DIR/reference_${REF_ID}.fasta -O $RAW_DIR/reference_${REF_ID}.dict
 
+#Mark duplicates...
+echo Marking nucleotide duplicates...
+gatk MarkDuplicates -I ${ALIGNED_DIR}/aligned_${SRA}.bam -O ${ALIGNED_DIR}/deduplicated_${SRA}.bam -M ${ALIGNED_DIR}/${SRA}_duplicate_metrics.txt
 
+#Index the deduplicated BAM file; creates .bai file to allow rapid access to regions of the BAM file
+echo Indexing deduduplicated BAM file...
+samtools index ${ALIGNED_DIR}/deduplicated_${SRA}.bam
 
 
 
