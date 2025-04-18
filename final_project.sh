@@ -35,8 +35,8 @@ QC_REPORT=${RESULTS_DIR}/qc
 TRIMMED_DIR=${RESULTS_DIR}/trimmed
 ALIGNED_DIR=${RESULTS_DIR}/aligned
 VARIANT_DIR=${RESULTS_DIR}/variants
-SNPEFF_DATA_DIR=${RESULTS_DIR}/snpEff
-ANNOTATED_DIR=${RESULTS_DIR}/annotated
+SNPEFF_DIR=${RESULTS_DIR}/snpEff
+SNPEFF_DATA_DIR=${SNPEFF_DIR}/data/reference_dbd
 
 echo Setting up directories...
 mkdir -p $RESULTS_DIR
@@ -44,6 +44,7 @@ mkdir -p $RAW_DIR $QC_REPORT $TRIMMED_DIR $ALIGNED_DIR
 mkdir -p $VARIANT_DIR
 mkdir -p $SNPEFF_DATA_DIR
 mkdir -p $ANNOTATED_DIR
+mkdir -p $SNPEFF_DIR $SNPEFF_DATA_DIR
 echo Completed setting up directories.
 
 # --------------------------------------------------------------------------------------
@@ -163,10 +164,36 @@ echo Filtering variants...
 gatk VariantFiltration -R $RAW_DIR/reference_${REF_ID}.fasta -V $VARIANT_DIR/raw_variants.vcf -O $VARIANT_DIR/filtered_variants.vcf --filter-expression "QD < 2.0 || FS > 60.0" --filter-name FILTER
 filtered variants same as raw -> because our disease is an SNP
 
-#Download our reference genome's GenBank file
-echo Downloading reference GenBank file for snpEff...
-efetch -db nucleotide -id $REF_ID -format genbank > $SNPEFF_DATA_DIR/HBB.gbk
-echo Downloaded GenBank file for snpEff!
+
+# echo Downloading reference GenBank file for snpEff...
+# efetch -db nucleotide -id $REF_ID -format genbank > $SNPEFF_DATA_DIR/HBB.gbk
+# echo Downloaded GenBank file for snpEff!
+
+
+# #Create snpEff condiguration file; clean up later by making new directory for config files 
+# echo Creating custom snpEff configuration file...
+# cat <<EOF > $SNPEFF_DIR/snpEff.config
+# # Custom snpEff config for reference_db
+# reference_db.genome : reference_db
+# reference_db.fa : $(readlink -f $RAW_DIR/reference_${REF_ID}.fasta)
+# reference_db.genbank : $(readlink -f $SNPEFF_DATA_DIR/HBB.gbk)
+# EOF
+
+# #conda install -c bioconda snpEff -y
+# echo Building snpEff database...
+# snpEff build -c $SNPEFF_DIR/snpEff.config -genbank -v -noCheckProtein reference_db
+# echo Built snpEff database!
+
+# #Exporting snpEff database (this is optional, we're just dumping the contents of the snpEff file into a text file for debugging)
+# echo Exporting snpEff database...
+# snpEff dump -c $SNPEFF_DIR/snpEff.config reference_db > $SNPEFF_DIR/snpEff_reference_db.txt 
+# echo Exported snpEff database!
+
+
+# echo Annotating variants with snpEff...
+# snpEff -c $SNPEFF_DIR/snpEff.config -stats $SNPEFF_DIR/snpEff.html reference_db $VARIANT_DIR/filtered_variants.vcf > $ANNOTATED_DIR/annotated_variants.vcf
+# echo Annotated variants with snpEff!
+
 
 # Use tree to check for correct files and directories.
 tree $RESULTS_DIR
