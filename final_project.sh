@@ -133,8 +133,8 @@ gatk ValidateSamFile -I ${ALIGNED_DIR}/aligned_${SRA}.bam -MODE SUMMARY
 echo Converting .fastq to .fasta
 seqtk seq -A ${TRIMMED_DIR}/trimmed_${SRA}.fastq > ${TRIMMED_DIR}/trimmed_${SRA}.fasta
 
-#BLAST
-echo Performing BLAST...; can edit evalue if we're not getting the results we want; but we are 
+#BLAST; ; can edit evalue if we're not getting the results we want; but we are 
+echo Performing BLAST...
 makeblastdb -in ${RAW_DIR}/reference_${REF_ID}.fasta -dbtype nucl -out blast/reference_${REF_ID}_db
 blastn -query ${TRIMMED_DIR}/trimmed_${SRA}.fasta -db blast/reference_${REF_ID}_db -out blast/blast_output.txt -outfmt 0 -evalue 1e-10
 
