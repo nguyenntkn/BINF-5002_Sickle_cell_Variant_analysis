@@ -14,12 +14,11 @@ function usage {
     echo conda activate /home/user/bioenv
     echo conda install -c bioconda entrez-direct sra-tools fastqc fastp cutadapt trimmomatic multiqc samtools -y
     echo conda install bwa
+    echo conda install -c bioconda gatk4 snpEff -y
     exit 1
 }
 
-#Install GATK - conda create -n gatk4 -c conda-forge -c bioconda gatk4
-#Activate gatk4: conda activate gatk4
-#     $ conda deactivate
+
 
 # usage 
 
@@ -35,10 +34,16 @@ RAW_DIR=${RESULTS_DIR}/rawdata
 QC_REPORT=${RESULTS_DIR}/qc
 TRIMMED_DIR=${RESULTS_DIR}/trimmed
 ALIGNED_DIR=${RESULTS_DIR}/aligned
+VARIANT_DIR=${RESULTS_DIR}/variants
+SNPEFF_DATA_DIR=${RESULTS_DIR}/snpEff
+ANNOTATED_DIR=${RESULTS_DIR}/annotated
 
 echo Setting up directories...
 mkdir -p $RESULTS_DIR
 mkdir -p $RAW_DIR $QC_REPORT $TRIMMED_DIR $ALIGNED_DIR
+mkdir -p $VARIANT_DIR
+mkdir -p $SNPEFF_DATA_DIR
+mkdir -p $ANNOTATED_DIR
 echo Completed setting up directories.
 
 # --------------------------------------------------------------------------------------
@@ -108,22 +113,30 @@ echo Aligning sequences...
 bwa mem "${RAW_DIR}/reference_${REF_ID}.fasta" "${TRIMMED_DIR}/trimmed_${SRA}.fastq" > "${ALIGNED_DIR}/aligned_${SRA}.sam"
 echo Completed aligning sequences.
 
+#bwa mem with read group
+#bwa mem -R "@RG\tID:SRR14329362\tLB:lib1\tPL:illumina\tPU:SRR14329362\tSM:sample1" "${RAW_DIR}/reference_${REF_ID}.fasta" "${TRIMMED_DIR}/trimmed_${SRA}.fastq" > "${ALIGNED_DIR}/aligned_${SRA}.sam"
+#echo Inserting read groups  
+
 #Convert SAM to sorted BAM; from human readable to binary file
 echo Converting .SAM to sorted BAM file...
 samtools view -b ${ALIGNED_DIR}/aligned_${SRA}.sam | samtools sort -o ${ALIGNED_DIR}/aligned_${SRA}.bam
 
+#Install GATK - conda install -c bioconda gatk4 -y
 #Validate BAM file
 echo Validating BAM file..
 gatk ValidateSamFile -I ${ALIGNED_DIR}/aligned_${SRA}.bam -MODE SUMMARY
+#Error: missing read group -> therefore need to do bwa mem -R
+#Now no errors found!
 
 #Convert FASTQ to FASTA for BLAST
 echo Converting .fastq to .fasta
 seqtk seq -A ${TRIMMED_DIR}/trimmed_${SRA}.fastq > ${TRIMMED_DIR}/trimmed_${SRA}.fasta
 
-#BLAST - makeblastdb from reference.fasta; then perform BLAST
-echo Performing BLAST...
+#BLAST
+echo Performing BLAST...; can edit evalue if we're not getting the results we want; but we are 
 makeblastdb -in ${RAW_DIR}/reference_${REF_ID}.fasta -dbtype nucl -out blast/reference_${REF_ID}_db
 blastn -query ${TRIMMED_DIR}/trimmed_${SRA}.fasta -db blast/reference_${REF_ID}_db -out blast/blast_output.txt -outfmt 0 -evalue 1e-10
+
 
 #Indexing with samtools
 echo Indexing reference genome with samtools...
@@ -141,7 +154,19 @@ gatk MarkDuplicates -I ${ALIGNED_DIR}/aligned_${SRA}.bam -O ${ALIGNED_DIR}/dedup
 echo Indexing deduduplicated BAM file...
 samtools index ${ALIGNED_DIR}/deduplicated_${SRA}.bam
 
+#Calling variants... HaplotypeCaller detects SNPs and indels from the BAM file; outputs to .vcf file (text file)
+echo Calling variants...
+gatk HaplotypeCaller -R ${RAW_DIR}/reference_${REF_ID}.fasta -I ${ALIGNED_DIR}/deduplicated_${SRA}.bam -O ${VARIANT_DIR}/raw_variants.vcf
 
+#Filter Variants
+echo Filtering variants...
+gatk VariantFiltration -R $RAW_DIR/reference_${REF_ID}.fasta -V $VARIANT_DIR/raw_variants.vcf -O $VARIANT_DIR/filtered_variants.vcf --filter-expression "QD < 2.0 || FS > 60.0" --filter-name FILTER
+filtered variants same as raw -> because our disease is an SNP
+
+#Download our reference genome's GenBank file
+echo Downloading reference GenBank file for snpEff...
+efetch -db nucleotide -id $REF_ID -format genbank > $SNPEFF_DATA_DIR/HBB.gbk
+echo Downloaded GenBank file for snpEff!
 
 # Use tree to check for correct files and directories.
 tree $RESULTS_DIR
