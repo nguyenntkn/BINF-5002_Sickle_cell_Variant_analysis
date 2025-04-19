@@ -34,7 +34,7 @@ TRIMMED_DIR=${RESULTS_DIR}/trimmed
 ALIGNED_DIR=${RESULTS_DIR}/aligned
 VARIANT_DIR=${RESULTS_DIR}/variants
 SNPEFF_DIR=${RESULTS_DIR}/snpEff
-SNPEFF_DATA_DIR=${SNPEFF_DIR}/data/reference_dbd
+SNPEFF_DATA_DIR=${SNPEFF_DIR}/data/reference_db
 BLAST=${RESULTS_DIR}/blast
 ANNOTATED_DIR=${RESULTS_DIR}/annotated
 
@@ -136,6 +136,8 @@ echo VALIDATING BAM FILE...
 gatk ValidateSamFile -I ${ALIGNED_DIR}/aligned_${SRA}.bam -MODE SUMMARY
 #Error: missing read group -> therefore need to do bwa mem -R
 #Now no errors found!
+# Warning:	ValidateSamFile	NM validation cannot be performed without the reference. All other validations will still occur.
+# NM is the edit distance (number of differences) from the reference sequence. We don't have to do this rn.
 
 # ---------------------PART 5: BLAST (Why?)-------------------------------------------------------------
 
@@ -198,8 +200,9 @@ gatk VariantFiltration -R $RAW_DIR/reference_${REF_ID}.fasta -V $VARIANT_DIR/raw
 # Re-download the reference sequence as GenBank format, containing indexed genes, transcripts, exons, CDS, UTRs, etc. 
 # We are using our chosen reference seq as the database instead of using snpEff's provided database.
 echo Downloading reference GenBank file for snpEff...
-efetch -db nucleotide -id $REF_ID -format genbank > $SNPEFF_DATA_DIR/HBB.gbk
+efetch -db nucleotide -id $REF_ID -format genbank > $SNPEFF_DATA_DIR/genes.gbk
 echo Downloaded GenBank file for snpEff!
+
 
 # snpEff need the following:
 # 1. A reference genome sequence (FASTA) 
@@ -218,7 +221,7 @@ cat <<EOF > $SNPEFF_DIR/snpEff.config       # Write the next few lines to the .c
 # Custom snpEff config for reference_db
 reference_db.genome : reference_db
 reference_db.fa : $(readlink -f $RAW_DIR/reference_${REF_ID}.fasta)     
-reference_db.genbank : $(readlink -f $SNPEFF_DATA_DIR/HBB.gbk)
+reference_db.genbank : $(readlink -f $SNPEFF_DATA_DIR/genes.gbk)
 EOF
 # readlink is a command that shows where a symbolic link (symlink) points to. 
 # The -f option means: follow every symlink in the path and return the absolute path to the final destination file.
@@ -240,6 +243,7 @@ echo Exported snpEff database!
 echo Annotating variants with snpEff...
 snpEff -c $SNPEFF_DIR/snpEff.config -stats $SNPEFF_DIR/snpEff.html reference_db $VARIANT_DIR/filtered_variants.vcf > $ANNOTATED_DIR/annotated_variants.vcf
 echo Annotated variants with snpEff!
+
 
 
 
