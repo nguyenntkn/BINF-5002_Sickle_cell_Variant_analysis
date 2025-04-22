@@ -2,7 +2,7 @@
 
 function usage {
     echo Project: BINF5002 final project - Genomics variant analysis of sickle cell anemia
-    echo Authors: Nikita Chaudhari, Simran Wilasra, Pragati Dwivedi, Tran Khanh Nguyen Nguyen
+    echo Authors: Nikita Chaudhari, Simran Wilasra, Pragati Dwivedi, Tran Khanh Nguyen Nguyen, Tanbira Alam.
     echo Description:
     echo Bioconda packages required: entrez-direct, sra-tools, fastqc, fastp, cutadapt, trimmomatic, multiqc, samtools...
     echo Actually used: entrez-direct, sra-tools, fastp, bwa
@@ -14,7 +14,6 @@ function usage {
     echo conda activate /home/user/bioenv
     echo conda install -c bioconda entrez-direct sra-tools fastqc fastp multiqc samtools gatk4 snpEff -y
     echo conda install bwa seqtk -y
-    echo Additional: conda install -c bioconda gatk4 snpEff cutadapt trimmomatic -y
     exit 1
 }
 
@@ -40,9 +39,7 @@ ANNOTATED_DIR=${RESULTS_DIR}/annotated
 
 echo SETTING UP DIRECTORIES...
 mkdir -p $RESULTS_DIR
-mkdir -p $RAW_DIR $QC_REPORT $TRIMMED_DIR $ALIGNED_DIR $VARIANT_DIR $ANNOTATED_DIR $SNPEFF_DIR $SNPEFF_DATA_DIR
-mkdir -p $BLAST
-# echo Completed setting up directories.
+mkdir -p $RAW_DIR $QC_REPORT $TRIMMED_DIR $ALIGNED_DIR $VARIANT_DIR $ANNOTATED_DIR $SNPEFF_DIR $SNPEFF_DATA_DIR $BLAST
 
 # Log output
 exec > >(tee -i $RESULTS_DIR/log.txt)
@@ -53,7 +50,7 @@ exec 2>&1
 # Download reference fasta sequence.
 echo DOWNLOADING REFERENCE SEQUENCE...
 efetch -db nucleotide -id $REF_ID -format fasta > "${RAW_DIR}/reference_${REF_ID}.fasta"
-# echo Completed downloading reference sequence.
+echo Completed downloading reference sequence.
 
 # Check if the reference sequence file has been downloaded.
 if [ ! -s "${RAW_DIR}/reference_${REF_ID}.fasta" ]; then
@@ -67,7 +64,7 @@ fi
 echo DOWNLOADING RAW FASTQ FILE...
 prefetch $SRA -O $RAW_DIR 
 fastq-dump ./${RAW_DIR}/${SRA} -O $RAW_DIR
-# echo Completed downloading raw sequencing data.
+echo Completed downloading raw sequencing data.
 
 # Check if the raw FASTQ sequencing file has been downloaded.
 if [ ! -s "${RAW_DIR}/${SRA}.fastq" ]; then
@@ -77,7 +74,6 @@ fi
 
 
 # -----------------------------PART 3: QUALITY CONTROL AND DATA CLEANING-------------------------------------------
-
 
 # We also need to check if the sequencing is single end or paired end.
 # Paired end reads will contain the /1 /2 identifiers or something similar.
@@ -92,7 +88,7 @@ fi
 # Since this is single end read, we will use -i and -o flags (lowercase).
 echo TRIMMING LOW QUALITY READS...
 fastp -i "${RAW_DIR}/${SRA}.fastq" -o "${TRIMMED_DIR}/trimmed_${SRA}.fastq" -h "${QC_REPORT}/${SRA}_fastp_report.html" -q 30
-# echo Completed trimming low quality reads.
+echo Completed trimming low quality reads.
 
 
 # -----------------------PART 4: SEQUENCE ALIGNMENT AND VALIDATION----------------------------------------------------
@@ -139,7 +135,8 @@ gatk ValidateSamFile -I ${ALIGNED_DIR}/aligned_${SRA}.bam -MODE SUMMARY
 # Warning:	ValidateSamFile	NM validation cannot be performed without the reference. All other validations will still occur.
 # NM is the edit distance (number of differences) from the reference sequence. We don't have to do this rn.
 
-# ---------------------PART 5: BLAST (Why?)-------------------------------------------------------------
+
+# ---------------------PART 5: BLAST -------------------------------------------------------------
 
 # Convert FASTQ to FASTA for BLAST
 echo CONVERTING TRIMMED FASTQ FILE TO FASTA FORMAT FOR BLAST...
@@ -159,6 +156,7 @@ blastn -query ${TRIMMED_DIR}/trimmed_${SRA}.fasta -db ${BLAST}/reference_${REF_I
 #   .ntf: Optional for translation offset information (when translated into different reading frames)
 #   .not: optional for nulti-threaded database
 # But the actual alignment is stored in ${BLAST}/blast_output_${SRA}.txt file
+
 
 # -----------------------------------PART 6: POST ALIGNMENT PROCESSING---------------------------------------------
 
@@ -228,7 +226,6 @@ EOF
 # Example: echo $(readlink -f $RAW_DIR/reference_${REF_ID}.fasta)
 # Output: /home/user/BINF5002_project/rawdata/reference_NG_059281.fasta
 
-
 # Build snpEff database
 echo Building snpEff database...
 snpEff build -c $SNPEFF_DIR/snpEff.config -genbank -v -noCheckProtein reference_db
@@ -245,15 +242,7 @@ snpEff -c $SNPEFF_DIR/snpEff.config -stats $SNPEFF_DIR/snpEff.html reference_db 
 echo Annotated variants with snpEff!
 
 
-
-
 # --------------------------------- SUPPLEMENT ---------------------------------------------
 # Use tree to check for correct files and directories.
 tree $RESULTS_DIR
-
-
-# # First do QC check.
-# echo Performing QC check on raw FASTQ file...
-# fastqc "${RAW_DIR}/${SRA}.fastq" -o $QC_REPORT
-# echo QC check completed.
 
